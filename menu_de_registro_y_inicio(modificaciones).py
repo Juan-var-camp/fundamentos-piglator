@@ -5,6 +5,7 @@ from tkinter import messagebox
 
 ventana_activa = None
 usuario_actual = None
+nombre_usuario = None
 
 conn = sqlite3.connect("usuarios.db")
 cursor = conn.cursor()
@@ -87,7 +88,7 @@ def actualizar_contraseña(entry_password, entry_new_password, entry_password_co
     messagebox.showinfo("Éxito", "Contraseña actualizada correctamente.")
     popup_change_password.destroy()
 
-def change_username():
+def change_username(nombre_usuario_var):
     popup_change_username = tk.Toplevel(ventana_activa)
     popup_change_username.title("Cambiar Nombre de Usuario")
     popup_change_username.grab_set()  # Bloquea la interacción con otras ventanas
@@ -97,20 +98,20 @@ def change_username():
     entry_new_username = tk.Entry(popup_change_username)
     entry_new_username.grid(row=0, column=1, padx=10, pady=5)
     
-    popup_change_username.bind('<Return>', lambda e: actualizar_nombre_usuario(entry_new_username, popup_change_username))
+    popup_change_username.bind('<Return>', lambda e: actualizar_nombre_usuario(entry_new_username, popup_change_username, nombre_usuario_var))
     popup_change_username.bind('<Escape>', lambda e: popup_change_username.destroy())
     
     tk.Button(popup_change_username,text="Cancelar",command=popup_change_username.destroy).grid(row=3, column=0, pady=5)
     tk.Button(
         popup_change_username, 
         text="Confirmar", 
-        command=lambda: actualizar_nombre_usuario(entry_new_username, popup_change_username)
+        command=lambda: actualizar_nombre_usuario(entry_new_username, popup_change_username, nombre_usuario_var)
     ).grid(row=3, column=1, padx=10, pady=5)
     
     centrar_ventana(popup_change_username)
 
-def actualizar_nombre_usuario(entry_new_username, popup_change_username):
-    global usuario_actual
+def actualizar_nombre_usuario(entry_new_username, popup_change_username, nombre_usuario_var):
+    global usuario_actual, nombre_usuario
     new_username = entry_new_username.get()
     if not new_username:
         messagebox.showerror("Error", "El campo de nombre de usuario no puede estar vacío.")
@@ -119,6 +120,8 @@ def actualizar_nombre_usuario(entry_new_username, popup_change_username):
     try:
         cursor.execute("UPDATE users SET username = ? WHERE id = ?", (new_username, usuario_actual))
         conn.commit()
+        nombre_usuario = new_username
+        nombre_usuario_var.set(f"Bienvenido usuario, {nombre_usuario}")
         messagebox.showinfo("Éxito", "Nombre de usuario actualizado correctamente.")
         popup_change_username.destroy()
     except sqlite3.IntegrityError:
@@ -131,7 +134,7 @@ def cerrar_ventana_activa():
         ventana_activa = None
 
 def login_usuario(entry_user_login,entry_password_login,login_window):
-    global usuario_actual
+    global usuario_actual, nombre_usuario
     username = entry_user_login.get()
     password = entry_password_login.get()
     hashed_password = hashlib.sha256(password.encode()).hexdigest()
@@ -143,13 +146,14 @@ def login_usuario(entry_user_login,entry_password_login,login_window):
     resultado = cursor.fetchone()
     if resultado and resultado[1] == hashed_password:
         usuario_actual = resultado[0]  
+        nombre_usuario = username
         messagebox.showinfo("Felicidades", "Inicio de sesion exitoso")
         login_window.destroy()
         menu_principal.destroy()
-        ventana_principal()
+        ventana_gastos()
     else:
         messagebox.showerror("Error", "Usuario o contraseña incorrectos")
-        
+
 def registrar_usuario(entry_user_register, entry_password_register, entry_confirm_password_register,register_window):
     username = entry_user_register.get()
     password = entry_password_register.get()
@@ -164,9 +168,9 @@ def registrar_usuario(entry_user_register, entry_password_register, entry_confir
     if len(password) < 8:
         messagebox.showerror("Error", "La contraseña debe tener al menos 8 caracteres")
         return
-      
+
     hashed_password = hashlib.sha256(password.encode()).hexdigest()
-    
+
     try:
         cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
         conn.commit()
@@ -232,36 +236,62 @@ def open_window_login():
     
     #Esta parte es para centrar la ventana emergente en la pantalla
     centrar_ventana(login_window)
-    
-def window_perfil():
+
+def generar_contenido_ventana(titulo, botones_sidebar, contenido_central):
     global ventana_activa
     cerrar_ventana_activa()
     ventana_activa = tk.Toplevel(root)
-    ventana_activa.title("Configuracion de perfil")
+    ventana_activa.title(titulo)
     ventana_activa.state("zoomed")
     
     ventana_activa.grid_columnconfigure(1, weight=1)
     ventana_activa.grid_rowconfigure(0, weight=1)
     
+    # Crear la barra lateral
     sidebar = tk.Frame(ventana_activa, bg="#2C3E50", width=200)
     sidebar.grid(row=0, column=0, sticky="ns")
-    sidebar.grid_rowconfigure(3, weight=1)
+    sidebar.grid_rowconfigure(len(botones_sidebar), weight=1)
     
+    # Crear el contenido principal
     content = tk.Frame(ventana_activa, bg="#ECF0F1")
     content.grid(row=0, column=1, sticky="nsew")
     content.grid_columnconfigure(0, weight=1)
     content.grid_rowconfigure(0, weight=1)
     
-    #Botones de la barra lateral
-    #Se le asigna la funcion de abrir la ventana correspondiente a cada boton
-    buttom_perfil = tk.Button(sidebar, text="perfil", width=15)
-    buttom_gastos = tk.Button(sidebar, text="gastos", width=15, command=ventana_principal)
-    buttom_ganancias = tk.Button(sidebar, text="ganancias", width=15, command=window_ganancias)
+    # Crear los botones de la barra lateral
+    for i, (texto, comando) in enumerate(botones_sidebar):
+        tk.Button(sidebar, text=texto, width=15, command=comando).grid(row=i, column=0, pady=10, padx=10, sticky="w")
 
-    #Distribucion de los botones en la barra lateral
-    buttom_perfil.grid(row=0, column=0, pady=10, padx=10, sticky="w")
-    buttom_gastos.grid(row=1, column=0, pady=10, padx=10, sticky="w")
-    buttom_ganancias.grid(row=2, column=0, pady=10, padx=10, sticky="w")
+    #Agregar el contenido central
+    contenido_central(content)
+
+    ventana_activa.protocol("WM_DELETE_WINDOW", lambda: cerrar_aplicacion(root))
+
+#Funciones para el contenido de las ventanas
+def contenido_ventana_gastos(content):
+    # Configurar las columnas para que ocupen la mitad del espacio cada una
+    content.grid_columnconfigure(0, weight=1)  # Primera columna (panel izquierdo)
+    content.grid_columnconfigure(1, weight=1)  # Segunda columna (panel derecho)
+    content.grid_rowconfigure(0, weight=1)    # Fila única para que ocupe todo el espacio vertical
+
+    # Crear el panel izquierdo
+    content_left = tk.Frame(content, bg="#ECF0F1", relief="solid", borderwidth=1)
+    content_left.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+
+    # Crear el panel derecho
+    content_right = tk.Frame(content, bg="#ECF0F1", relief="solid", borderwidth=1)
+    content_right.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+
+    # Agregar contenido a los paneles
+    tk.Label(content_left, text="Panel Izquierdo", font=("Arial", 16), bg="#ECF0F1").pack(pady=20)
+    tk.Label(content_right, text="Panel Derecho", font=("Arial", 16), bg="#ECF0F1").pack(pady=20)
+
+def contenido_ganancias(content):
+    tk.Label(content, text="Las ganancias", font=("Arial", 20)).grid(row=0, column=0, pady=50)
+
+def contenido_perfil(content):
+    global nombre_usuario
+    nombre_usuario_var = tk.StringVar(value=f"Bienvenido usuario, {nombre_usuario}")
     
     center_container = tk.Frame(content, bg="#ECF0F1")
     center_container.place(relx=0.5, rely=0.5, anchor="center")
@@ -270,91 +300,25 @@ def window_perfil():
     profile_frame.pack()
     
     tk.Label(profile_frame, text="Configuración del perfil", font=("Arial", 20), bg="#8B0000", fg="white").pack(pady=10)
-    tk.Label(profile_frame, text=f"Bienvenido usuario, {usuario_actual}", font=("Arial", 14), bg="#8B0000", fg="white").pack(pady=10)
+    tk.Label(profile_frame, textvariable=nombre_usuario_var, font=("Arial", 14), bg="#8B0000", fg="white").pack(pady=10)
     
-    buttom_change_u = tk.Button(profile_frame, text="Cambiar nombre de usuario", width=25, relief="solid", borderwidth=1, command=change_username)
-    buttom_change_u.pack(pady=10)
-    
-    buttom_change_p = tk.Button(profile_frame, text="Cambiar contraseña", width=25, relief="solid", borderwidth=1, command=change_password)
-    buttom_change_p.pack(pady=10)
-    
-    ventana_activa.protocol("WM_DELETE_WINDOW", lambda: cerrar_aplicacion(root))
-    
+    tk.Button(profile_frame, text="Cambiar nombre de usuario", width=25, relief="solid", borderwidth=1, command=lambda: change_username(nombre_usuario_var)).pack(pady=10)
+    tk.Button(profile_frame, text="Cambiar contraseña", width=25, relief="solid", borderwidth=1, command=change_password).pack(pady=10)
+
+#Funciones de las ventanas
+def ventana_gastos():
+    generar_contenido_ventana("Ventana gastos", [("perfil", window_perfil), ("gastos", ventana_gastos), ("ganancias", window_ganancias)], contenido_ventana_gastos)
+
 def window_ganancias():
-    global ventana_activa
-    cerrar_ventana_activa()
-    ventana_activa = tk.Toplevel(root)
-    ventana_activa.title("Ganancias")
-    ventana_activa.state("zoomed")
-    
-    ventana_activa.grid_columnconfigure(1, weight=1)
-    ventana_activa.grid_rowconfigure(0, weight=1)
-    
-    sidebar = tk.Frame(ventana_activa, bg="#2C3E50", width=200)
-    sidebar.grid(row=0, column=0, sticky="ns")
-    sidebar.grid_rowconfigure(3, weight=1)
-    
-    content = tk.Frame(ventana_activa, bg="#ECF0F1")
-    content.grid(row=0, column=1, sticky="nsew")
-    content.grid_columnconfigure(0, weight=1)
-    content.grid_rowconfigure(0, weight=1)
-    
-    buttom_perfil = tk.Button(sidebar, text="perfil", width=15, command=window_perfil)
-    buttom_gastos = tk.Button(sidebar, text="gastos", width=15, command=ventana_principal)
-    buttom_ganancias = tk.Button(sidebar, text="ganancias", width=15)
-    
-    buttom_perfil.grid(row=0, column=0, pady=10, padx=10, sticky="w")
-    buttom_gastos.grid(row=1, column=0, pady=10, padx=10, sticky="w")
-    buttom_ganancias.grid(row=2, column=0, pady=10, padx=10, sticky="w")
-    
-    label = tk.Label(content, text="Las ganancias", font=("Arial", 20))
-    label.grid(row=0, column=0, pady=50)
-    
-    ventana_activa.protocol("WM_DELETE_WINDOW", lambda: cerrar_aplicacion(root))
-    
-def ventana_principal():
-    global ventana_activa
-    cerrar_ventana_activa()
-    ventana_activa = tk.Toplevel(root)
-    ventana_activa.title("Ventana principal")
-    ventana_activa.state("zoomed")
-    
-    ventana_activa.grid_columnconfigure(1, weight=1)
-    ventana_activa.grid_rowconfigure(0, weight=1)
-    
-    sidebar = tk.Frame(ventana_activa, bg="#2C3E50", width=200)
-    sidebar.grid(row=0, column=0, sticky="ns")
-    sidebar.grid_rowconfigure(3, weight=1)
-    
-    # Crear frames para el contenido principal dividido
-    content_left = tk.Frame(ventana_activa, bg="#ECF0F1", relief="solid", borderwidth=1)
-    content_left.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
-    
-    content_right = tk.Frame(ventana_activa, bg="#ECF0F1", relief="solid", borderwidth=1)
-    content_right.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
-    
-    # Configurar pesos de las columnas para el contenido
-    ventana_activa.grid_columnconfigure(1, weight=1)
-    ventana_activa.grid_columnconfigure(2, weight=1)
-    
-    buttom_perfil = tk.Button(sidebar, text="perfil", width=15, command=window_perfil)
-    buttom_gastos = tk.Button(sidebar, text="gastos", width=15)
-    buttom_ganancias = tk.Button(sidebar, text="ganancias", width=15, command=window_ganancias)
-    
-    buttom_perfil.grid(row=0, column=0, pady=10, padx=10, sticky="w")
-    buttom_gastos.grid(row=1, column=0, pady=10, padx=10, sticky="w")
-    buttom_ganancias.grid(row=2, column=0, pady=10, padx=10, sticky="w")
-    
- # Títulos para los paneles de contenido
-    tk.Label(content_left, text="Panel Izquierdo", font=("Arial", 16), bg="#ECF0F1").pack(pady=20)
-    tk.Label(content_right, text="Panel Derecho", font=("Arial", 16), bg="#ECF0F1").pack(pady=20)
-    
-    ventana_activa.protocol("WM_DELETE_WINDOW", lambda: cerrar_aplicacion(root)) 
-    
+    generar_contenido_ventana("Ganancias", [("perfil", window_perfil), ("gastos", ventana_gastos), ("ganancias", window_ganancias)], contenido_ganancias)
+
+def window_perfil():
+    generar_contenido_ventana("Configuracion de perfil", [("perfil", window_perfil), ("gastos", ventana_gastos), ("ganancias", window_ganancias)], contenido_perfil)
+
 def cerrar_aplicacion(ventana_root):
     conn.close()# Cierra la conexión a la base de datos
     ventana_root.destroy()# Destruye la raíz para cerrar la app
-    
+
 #Se crea una ventana raiz oculta para que el resto de ventanas sean una toplevel de esta
 root = tk.Tk()
 root.withdraw()
