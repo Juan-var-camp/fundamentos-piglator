@@ -41,6 +41,7 @@ try:
     cursor.execute("ALTER TABLE users ADD COLUMN precio_vivo_3 INTEGER DEFAULT 8000")
     cursor.execute("ALTER TABLE users ADD COLUMN precio_menudeo INTEGER DEFAULT 11500")
     conn.commit()
+    
 except sqlite3.OperationalError:
     pass  # Las columnas ya existen
 
@@ -50,7 +51,7 @@ semana_consumo = {
     "11": 1.95, "12": 2.05, "13": 2.15, "14": 2.25, "15": 2.35, "16": 2.45, "17": 2.55, "18": 2.65, "19": 2.75,
     "20": 2.8, "21": 2.85
 }
-    
+
 semana_peso={"1":6.665,"2":8.31,"3":10.655,"4":13.84,"5":17.865,"6":22.52,"7":27.6,"8":32.95,"9":38.55,"10":44.3,
                 "11":50.15,"12":56.2,"13":62.4,"14":68.8,"15":75.3,"16":81.95,"17":88.75,"18":95.7,"19":102.75,
                 "20":109.9,"21":117.1}
@@ -156,6 +157,7 @@ def configurar_piara(piara_id, listbox, callback_recarga=None):
         return
 
     def guardar_cambios():
+
         nuevo_nombre = entry_nombre.get()
         nuevo_tamaño = entry_tamaño.get()
         nuevas_semanas = entry_semanas.get()
@@ -181,6 +183,7 @@ def configurar_piara(piara_id, listbox, callback_recarga=None):
         except ValueError:
             messagebox.showerror("Error", "Tamaño y semanas deben ser números enteros.")
             return
+        
         try:
             cursor.execute("UPDATE piaras SET nombre=?, tamaño=?, semanas=? WHERE id=?",
                            (nuevo_nombre, nuevo_tamaño, nuevas_semanas, piara_id))
@@ -189,6 +192,7 @@ def configurar_piara(piara_id, listbox, callback_recarga=None):
             messagebox.showinfo("Éxito", "Piara actualizada correctamente.")
             if callback_recarga:
                 callback_recarga()
+
         except sqlite3.IntegrityError:
             messagebox.showerror("Error", "El nombre de la piara ya existe.")
 
@@ -350,6 +354,7 @@ def obtener_ids_seleccionados(listbox, piara_id_map):
     return [piara_id_map[nombre] for nombre in nombres_seleccionados]
 
 def configuracion_avanzada():
+
     def guardar_cambios():
         try:
             global preiniciador, iniciacion, levante, engorde
@@ -435,11 +440,13 @@ def configuracion_avanzada():
 def cargar_precios_usuario():
     global preiniciador, iniciacion, levante, engorde
     global precio_vivo_1, precio_vivo_2, precio_vivo_3, precio_menudeo
+    
     cursor.execute("""
         SELECT preiniciador, iniciacion, levante, engorde, precio_vivo_1, precio_vivo_2, precio_vivo_3, precio_menudeo
         FROM users WHERE id = ?
     """, (usuario_actual,))
     datos = cursor.fetchone()
+
     if datos:
         preiniciador, iniciacion, levante, engorde, precio_vivo_1, precio_vivo_2, precio_vivo_3, precio_menudeo = datos
 
@@ -628,12 +635,13 @@ def contenido_gastos(content):
 
     def recargar_lista_piaras():
         cargar_piaras_en_listbox(etiquetas_piaras, piara_id_map, usuario_actual)
-        
+
     def mostrar_gastos():
         ids_seleccionados = obtener_ids_seleccionados(etiquetas_piaras, piara_id_map)
         if not ids_seleccionados:
             messagebox.showerror("Error", "Selecciona al menos una piara")
             return
+        
         resultados = calcular_gastos_piaras(ids_seleccionados)
         # Limpiar el frame antes de mostrar nuevos resultados
         for widget in table_frame.winfo_children():
@@ -645,6 +653,7 @@ def contenido_gastos(content):
         tk.Label(table_frame, text=f"TOTAL GASTOS: {resultados['total_gastos']:.2f}", bg="white", font=("Arial", 12)).pack(anchor="w")
 
     def eliminar_seleccionadas():
+
         ids_seleccionados = obtener_ids_seleccionados(etiquetas_piaras, piara_id_map)
         eliminar_piaras(ids_seleccionados, etiquetas_piaras, recargar_lista_piaras)
 
@@ -653,6 +662,7 @@ def contenido_gastos(content):
         if len(ids_seleccionados) != 1:
             messagebox.showerror("Error", "Selecciona solo una piara para configurar.")
             return
+
         configurar_piara(ids_seleccionados[0], etiquetas_piaras, recargar_lista_piaras)
     
     def exportar_gastos_txt():
@@ -805,6 +815,7 @@ def generar_contenido_ventana(titulo, botones_sidebar, contenido_central):
     ventana_activa.protocol("WM_DELETE_WINDOW", lambda: cerrar_aplicacion(root))
 
 def crear_ventana_emergente(titulo, contenido_func, ventana_padre=None, centrada=True):
+    
     popup = tk.Toplevel(ventana_padre or root)
     popup.title(titulo)
     popup.grab_set()
@@ -967,7 +978,6 @@ menu_principal.iconbitmap("logo.ico")
 ancho_pantalla = root.winfo_screenwidth()
 alto_pantalla = root.winfo_screenheight()
 menu_principal.geometry(f"{ancho_pantalla}x{alto_pantalla}")  
-
 
 def prevent_maximize(event=None):
     if menu_principal.state() != 'zoomed':  # Si NO está maximizada
