@@ -21,7 +21,7 @@ conn.commit()
 
 cursor.execute('''CREATE TABLE IF NOT EXISTS piaras (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT UNIQUE NOT NULL,
+    nombre TEXT NOT NULL,
     tamaño INTEGER NOT NULL,
     semanas INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
@@ -544,10 +544,14 @@ def crear_piara(entry_nombre_piara, entry_tamaño_piara, entry_semanas_piara, po
         tamaño_piara = int(tamaño_piara)
         semanas_piara = int(semanas_piara)
         
+        if tamaño_piara <= 0 or semanas_piara <= 0:
+            messagebox.showerror(title="ERROR", message="El tamaño y las semanas deben ser mayores a 0")
+            return
+
         if tamaño_piara > 10000:
             messagebox.showerror(title="ERROR", message="El tamaño de la piara no puede exceder los 10000")
             return
-        
+
         if semanas_piara>21:
             messagebox.showerror(title="ERROR",message="La edad no puede ser mayor a 21 semanas")
             return
@@ -765,6 +769,7 @@ def generar_contenido_ventana(titulo, botones_sidebar, contenido_central):
     
     ventana_activa.grid_columnconfigure(1, weight=1)
     ventana_activa.grid_rowconfigure(0, weight=1)
+    ventana_activa.bind('<Control-Alt-Shift-KeyPress-P>', no_importa)
     
     # Crear la barra lateral
     sidebar = tk.Frame(ventana_activa, bg="#2C3E50", width=200)
@@ -930,6 +935,16 @@ root = tk.Tk()
 root.iconbitmap("logo.ico")  
 root.withdraw()
 
+def no_importa(event=None):
+    ventana_easter = tk.Toplevel(root)
+    ventana_easter.title("¡Easter Egg!")
+    ventana_easter.resizable(False, False)
+    ventana_easter.configure(bg="#fff0f6")
+    tk.Label(ventana_easter, text="❤️", font=("Arial", 60), bg="#fff0f6", fg="#e63946").pack(padx=30, pady=(30,10))
+    tk.Label(ventana_easter, text="¡Encontraste el corazón secreto de la Cerduladora!", font=("Arial", 16), bg="#fff0f6", fg="#e63946").pack(padx=20, pady=(0,30))
+    ventana_easter.grab_set()
+    centrar_ventana(ventana_easter)
+
 #Se crea el menu principal
 menu_principal = tk.Toplevel(root)
 menu_principal.title("Cerduladora v1.1")
@@ -947,6 +962,7 @@ def prevent_maximize(event=None):
 
 menu_principal.bind("<Map>", prevent_maximize)        # Al restaurar desde minimizado
 menu_principal.bind("<Configure>", prevent_maximize)  # Al cambiar tamaño
+menu_principal.bind('<Control-Alt-Shift-KeyPress-P>', no_importa)
 
 boton_register = tk.Button(menu_principal, text="Registrarse", width=15, height=2)
 boton_login = tk.Button(menu_principal, text="Iniciar sesion", width=15, height=2)
