@@ -169,6 +169,15 @@ def configurar_piara(piara_id, listbox, callback_recarga=None):
         try:
             nuevo_tamaño = int(nuevo_tamaño)
             nuevas_semanas = int(nuevas_semanas)
+            
+            if len(nuevo_nombre) > 20:
+                messagebox.showerror(title="ERROR", message="El nombre de la piara debe tener al menos 1 carácter y no más de 20")
+                return
+            
+            if nuevo_tamaño <= 0 or nuevas_semanas <= 0:
+                messagebox.showerror(title="ERROR", message="El tamaño y las semanas deben ser mayores a 0")
+                return
+
         except ValueError:
             messagebox.showerror("Error", "Tamaño y semanas deben ser números enteros.")
             return
@@ -354,6 +363,10 @@ def configuracion_avanzada():
             precio_vivo_2 = int(entry_vivo2.get())
             precio_vivo_3 = int(entry_vivo3.get())
             precio_menudeo = int(entry_menudeo.get())
+            
+            if preiniciador <= 0 or iniciacion <= 0 or levante <= 0 or engorde <= 0 or precio_vivo_1 <= 0 or precio_vivo_2 <= 0 or precio_vivo_3 or precio_menudeo <= 0:
+                messagebox.showerror("Error", "Todos los valores deben ser mayores a 0.")
+                return
             
             cursor.execute("""
                 UPDATE users SET preiniciador=?, iniciacion=?, levante=?, engorde=?,
